@@ -102,8 +102,11 @@ class CarbonPlugin(GmetadPlugin):
     def _closeConnection(self):
         if self.carbon_socket:
             logging.debug("Closing connection to carbon")
-            self.carbon_socket.shutdown(socket.SHUT_RDWR)
-            self.carbon_socket.close()
+            try:
+                self.carbon_socket.shutdown(socket.SHUT_RDWR)
+                self.carbon_socket.close()
+            except Exception, e:
+                logging.error("Exception while closing socket: %s" % e)
             self.carbon_socket = None
 
     def _sendPickledMetrics(self, metrics):
