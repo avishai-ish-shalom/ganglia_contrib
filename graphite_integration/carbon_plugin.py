@@ -21,9 +21,16 @@ import socket
 import pickle
 import struct
 import string
+import math
 
 from Gmetad.gmetad_plugin import GmetadPlugin
 from Gmetad.gmetad_config import getConfig, GmetadConfig
+
+PICKLE_BATCH_SIZE = 50
+
+def partition_list(l, part_size):
+    "This function partitions a list to lists of maximum size part_size"
+    return [l[i*part_size:(i+1)*part_size] for i in xrange(int(math.ceil(float(len(l)) / part_size)))]
 
 def get_plugin():
     ''' All plugins are required to implement this method.  It is used as the factory
@@ -108,8 +115,13 @@ class CarbonPlugin(GmetadPlugin):
             except Exception, e:
                 logging.error("Exception while closing socket: %s" % e)
             self.carbon_socket = None
-
+    
     def _sendPickledMetrics(self, metrics):
+        "Partition metrics into batches and send each batch"
+        for metrics_batch in partition_list(metrics, PICKLE_BATCH_SIZE):
+            self._sendPickledMetricsBatch(metrics_batch)
+
+    def _sendPickledMetricsBatch(self, metrics):
         # the pickle protocol used by carbon works by packing metrics into a list/tuple, each item packed as:
         # (metric_name, (timstamp, value))
         try:
